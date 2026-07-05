@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bishkek Spectacle — Спорт & Polaroid</title>
+    <!-- Подключаем Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyberDark: '#0b0f19',
+                        cyberCard: '#111827',
+                        cyberSport: '#ff0055',
+                        cyberPolaroid: '#00ffcc',
+                    },
+                    boxShadow: {
+                        sportNeon: '0 0 20px #ff0055',
+                        polaroidNeon: '0 0 20px #00ffcc',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Иконки FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        html { scroll-behavior: smooth; }
+        /* Анимация для уведомлений */
+        .toast-animate {
+            animation: slideIn 0.3s ease forwards, fadeOut 0.3s ease 2s forwards;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-cyberDark text-gray-100 font-sans antialiased min-h-screen selection:bg-cyberSport selection:text-white relative overflow-x-hidden">
+
+    <!-- ТОСТ-УВЕДОМЛЕНИЯ (ВСПЛЫВАШКИ) -->
+    <div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- FLOATING CART BUTTON -->
+    <button onclick="toggleCart()" id="cart-float-btn" class="fixed bottom-6 right-6 z-40 bg-cyberSport hover:bg-opacity-80 text-white p-4 rounded-full shadow-[0_0_15px_#ff0055] transition-all transform hover:scale-110 flex items-center justify-center">
+        <i class="fa-solid fa-basket-shopping text-xl"></i>
+        <span id="cart-badge" class="absolute -top-1 -right-1 bg-cyberPolaroid text-cyberDark text-xs font-black w-5 h-5 rounded-full flex items-center justify-center hidden">0</span>
+    </button>
+
+    <!-- SIDEBAR CART -->
+    <div id="cart-sidebar" class="fixed top-0 right-0 h-full w-full sm:w-96 bg-cyberCard border-l border-gray-800 z-50 transform translate-x-full transition-transform duration-300 flex flex-col justify-between p-6 shadow-2xl">
+        <div class="flex flex-col h-[75vh]">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-4 mb-4">
+                <h3 id="text-cart-title" class="text-lg font-black uppercase tracking-wider text-white">
+                    [ Лист примерки ]
+                </h3>
+                <button onclick="toggleCart()" class="text-gray-400 hover:text-cyberSport text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div id="cart-items" class="space-y-4 overflow-y-auto flex-grow pr-2 mb-4">
+                <p id="cart-empty-text" class="text-gray-500 text-sm italic text-center py-8">Твой лист примерки пока пуст.</p>
+            </div>
+
+            <!-- ПОЛЕ ДЛЯ ВВОДА АДРЕСА -->
+            <div class="border-t border-gray-800 pt-4">
+                <label for="delivery-address" class="block text-xs uppercase tracking-wider font-mono text-gray-400 mb-2">
+                    <i class="fa-solid fa-map-location-dot text-cyberPolaroid mr-1"></i> 
+                    <span id="text-address-field-label">Адрес доставки в Бишкеке:</span>
+                </label>
+                <input type="text" id="delivery-address" placeholder="Улица, дом, квартира или ориентир..." 
+                    class="w-full bg-slate-900 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyberPolaroid transition-colors">
+            </div>
+        </div>
+        
+        <div class="border-t border-gray-800 pt-4 bg-cyberCard">
+            <div class="flex justify-between items-center mb-4">
+                <span id="text-cart-total" class="text-xs uppercase font-bold text-gray-400">Итого к примерке:</span>
+                <span id="cart-total-price" class="text-xl font-black text-cyberPolaroid">0 KGS</span>
+            </div>
+            <button onclick="sendOrderToWhatsApp()" class="w-full bg-green-600 hover:bg-green-500 text-white text-xs font-black uppercase tracking-wider py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
+                <i class="fa-brands fa-whatsapp text-base"></i> <span id="text-cart-btn">Вызвать курьера с очками</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="border-b border-gray-800 py-5 px-6 max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="text-2xl font-black uppercase tracking-wider text-white">
+            Timber<span class="text-cyberPolaroid">Style</span>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <button id="langToggle" class="bg-cyberCard border border-gray-700 hover:border-cyberPolaroid px-3 py-1.5 rounded text-xs font-black tracking-widest text-white transition-all">
+                KG
+            </button>
+            <a href="#map-section" class="flex items-center gap-2 bg-slate-900 border border-cyberPolaroid/40 hover:border-cyberPolaroid px-3 py-1.5 rounded-md text-xs font-bold tracking-widest uppercase text-cyberPolaroid transition-all cursor-pointer">
+                <span class="animate-pulse w-2 h-2 rounded-full bg-cyberPolaroid"></span>
+                <span id="text-location">Локация: Бишкек</span>
+            </a>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+        
+        <!-- HERO SECTION -->
+        <section class="text-center mb-8">
+            <h1 id="text-hero-title" class="text-4xl sm:text-6xl font-black tracking-tighter uppercase mb-6 text-white leading-tight">
+                ЖЕСТКИЙ СТИЛЬ.<br class="sm:hidden"> ИДЕАЛЬНАЯ ЧЕТКОСТЬ.
+            </h1>
+            <p id="text-hero-desc" class="text-gray-400 max-w-2xl mx-auto text-base sm:text-lg">
+                Твой уличный комплит для защиты от солнца, встречного ветра и серых будней. Только технологичный спорт и оригинальный Polaroid в Бишкеке.
+            </p>
+        </section>
+
+        <!-- ЖИВОЙ ПОИСК И ФИЛЬТРЫ -->
+        <section class="max-w-md mx-auto mb-12 space-y-4">
+            <!-- Поле поиска -->
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input type="text" id="search-input" oninput="filterProducts()" placeholder="Быстрый поиск очков по названию..." 
+                    class="w-full bg-cyberCard border border-gray-800 rounded-lg pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyberSport transition-colors">
+            </div>
+
+            <!-- Кнопки категорий -->
+            <div class="flex justify-center gap-2">
+                <button onclick="setCategory('all')" id="btn-all" class="filter-btn active-filter bg-cyberSport border border-cyberSport text-white text-[10px] sm:text-xs font-black tracking-widest uppercase px-4 py-2 rounded transition-all">
+                    [ ВСЕ ]
+                </button>
+                <button onclick="setCategory('sport')" id="btn-sport" class="filter-btn bg-cyberCard border border-gray-800 text-gray-400 hover:text-white hover:border-cyberSport text-[10px] sm:text-xs font-black tracking-widest uppercase px-4 py-2 rounded transition-all">
+                    [ SPORT ]
+                </button>
+                <button onclick="setCategory('polaroid')" id="btn-polaroid" class="filter-btn bg-cyberCard border border-gray-800 text-gray-400 hover:text-white hover:border-cyberPolaroid text-[10px] sm:text-xs font-black tracking-widest uppercase px-4 py-2 rounded transition-all">
+                    [ POLAROID ]
+                </button>
+            </div>
+        </section>
+
+        <!-- КАТАЛОГ ОЧКОВ -->
+        <section class="mb-16">
+            <!-- СТАЛО (3 колонки + чуть меньше отступы и высота для компактности) -->
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5" id="catalog-grid">
+                
+                <!-- Товар 1 -->
+                <div class="product-item bg-cyberCard border border-gray-800 rounded-lg p-5 flex flex-col justify-between transition-all duration-300 hover:border-cyberSport/50" data-category="sport" data-name="cyber shield x-1">
+                    <div>
+                        <div class="w-full h-48 bg-slate-900 rounded mb-4 flex items-center justify-center border border-gray-800 text-gray-600 text-xs uppercase tracking-widest font-mono">
+                            [ cyber shield photo ]
+                        </div>
+                        <h4 class="product-title text-lg font-bold text-white uppercase tracking-wide mb-2">Cyber Shield X-1</h4>
+                        <p class="text-gray-400 text-xs mb-4 leading-relaxed data-translate" data-ru="Зеркальная цельная линза, максимальный боковой обзор, защита от летящей пыли и жесткого ультрафиолета." data-kg="Күзгүдөй бүтүн линза, максималдуу каптал көрүнүшү, учкан чаңдан жана катуу ультракызыл нурлардан коргоо.">
+                            Зеркальная цельная линза, максимальный боковой обзор, защита от летящей пыли и жесткого ультрафиолета.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-800 flex items-center justify-between gap-4">
+                        <span class="text-xl font-black text-cyberSport tracking-tight">1800 KGS</span>
+                        <button onclick="addToCart('Cyber Shield X-1', 1800)" class="bg-transparent border border-cyberSport text-cyberSport text-xs font-extrabold uppercase px-4 py-2.5 rounded transition-all duration-300 hover:bg-cyberSport hover:text-white hover:shadow-sportNeon data-translate-btn" data-ru="Добавить на примерку" data-kg="Ченөөгө кошуу">
+                            Добавить на примерку
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Товар 2 -->
+                <div class="product-item bg-cyberCard border border-gray-800 rounded-lg p-5 flex flex-col justify-between transition-all duration-300 hover:border-cyberSport/50" data-category="sport" data-name="rave runner y2k">
+                    <div>
+                        <div class="w-full h-48 bg-slate-900 rounded mb-4 flex items-center justify-center border border-gray-800 text-gray-600 text-xs uppercase tracking-widest font-mono">
+                            [ rave runner photo ]
+                        </div>
+                        <h4 class="product-title text-lg font-bold text-white uppercase tracking-wide mb-2">Rave Runner Y2K</h4>
+                        <p class="text-gray-400 text-xs mb-4 leading-relaxed data-translate" data-ru="Узкие стремительные спортивные очки в футуристичном стиле нулевых. Абсолютный стритвир тренд сезона." data-kg="Нөлүнчү жылдардын футуристтик стилиндеги ичке, тез спорттук көз айнек. Сезондун абсолюттук стритвир тренди.">
+                            Узкие стремительные спортивные очки в футуристичном стиле нулевых. Абсолютный стритвир тренд сезона.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-800 flex items-center justify-between gap-4">
+                        <span class="text-xl font-black text-cyberSport tracking-tight">1500 KGS</span>
+                        <button onclick="addToCart('Rave Runner Y2K', 1500)" class="bg-transparent border border-cyberSport text-cyberSport text-xs font-extrabold uppercase px-4 py-2.5 rounded transition-all duration-300 hover:bg-cyberSport hover:text-white hover:shadow-sportNeon data-translate-btn" data-ru="Добавить на примерку" data-kg="Ченөөгө кошуу">
+                            Добавить на примерку
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Товар 3 -->
+                <div class="product-item bg-cyberCard border border-gray-800 rounded-lg p-5 flex flex-col justify-between transition-all duration-300 hover:border-cyberPolaroid/50" data-category="polaroid" data-name="polaroid driver pro">
+                    <div>
+                        <div class="w-full h-48 bg-slate-900 rounded mb-4 flex items-center justify-center border border-gray-800 text-gray-600 text-xs uppercase tracking-widest font-mono">
+                            [ polaroid driver photo ]
+                        </div>
+                        <h4 class="product-title text-lg font-bold text-white uppercase tracking-wide mb-2">Polaroid Driver Pro</h4>
+                        <p class="text-gray-400 text-xs mb-4 leading-relaxed data-translate" data-ru="Классическая строгая форма, премиальные темные линзы с максимальным поглощением бликов. Идеально за руль." data-kg="Классикалык так форма, чагылышууну максималдуу түрдө сиңирүүчү премиум кара линзалар. Рулга идеалдуу.">
+                            Классическая строгая форма, премиальные темные линзы с максимальным поглощением бликов. Идеально за руль.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-800 flex items-center justify-between gap-4">
+                        <span class="text-xl font-black text-cyberPolaroid tracking-tight">2400 KGS</span>
+                        <button onclick="addToCart('Polaroid Driver Pro', 2400)" class="bg-transparent border border-cyberPolaroid text-cyberPolaroid text-xs font-extrabold uppercase px-4 py-2.5 rounded transition-all duration-300 hover:bg-cyberPolaroid hover:text-cyberDark hover:shadow-polaroidNeon data-translate-btn" data-ru="Добавить на примерку" data-kg="Ченөөгө кошуу">
+                            Добавить на примерку
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Товар 4 -->
+                <div class="product-item bg-cyberCard border border-gray-800 rounded-lg p-5 flex flex-col justify-between transition-all duration-300 hover:border-cyberPolaroid/50" data-category="polaroid" data-name="urban minimalist">
+                    <div>
+                        <div class="w-full h-48 bg-slate-900 rounded mb-4 flex items-center justify-center border border-gray-800 text-gray-600 text-xs uppercase tracking-widest font-mono">
+                            [ urban minimalist photo ]
+                        </div>
+                        <h4 class="product-title text-lg font-bold text-white uppercase tracking-wide mb-2">Urban Minimalist</h4>
+                        <p class="text-gray-400 text-xs mb-4 leading-relaxed data-translate" data-ru="Легкая технологичная оправа с матовым финишем. Поляризованные универсальные линзы на каждый день." data-kg="Матовый финишдүү жеңил технологиялык алкак. Күнүмдүк колдонууга поляризацияланган универсалдуу линзалар.">
+                            Легкая технологичная оправа с матовым финишем. Поляризованные универсальные линзы на каждый день.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-800 flex items-center justify-between gap-4">
+                        <span class="text-xl font-black text-cyberPolaroid tracking-tight">2200 KGS</span>
+                        <button onclick="addToCart('Urban Minimalist', 2200)" class="bg-transparent border border-cyberPolaroid text-cyberPolaroid text-xs font-extrabold uppercase px-4 py-2.5 rounded transition-all duration-300 hover:bg-cyberPolaroid hover:text-cyberDark hover:shadow-polaroidNeon data-translate-btn" data-ru="Добавить на примерку" data-kg="Ченөөгө кошуу">
+                            Добавить на примерку
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- DELIVERY / CALL TO ACTION -->
+        <section class="relative rounded-2xl overflow-hidden p-8 sm:p-12 text-center bg-gradient-to-br from-slate-900 via-purple-950/20 to-slate-900 border border-dashed border-cyberPolaroid/60 mb-16">
+            <h3 id="text-cta-title" class="text-2xl sm:text-3xl font-black uppercase mb-4 text-white tracking-wide">
+                Примерка и быстрая доставка по Бишкеку
+            </h3>
+            <p id="text-cta-desc" class="text-gray-300 text-sm sm:text-base max-w-xl mx-auto mb-8 leading-relaxed">
+                Не уверен, какая форма подойдет под твое лицо? Без проблем. Напиши нам — мы соберем <span class="text-cyberPolaroid font-bold">2-3 любые модели</span> на твой выбор и доставим курьером в любую точку города за пару часов.
+            </p>
+            <button onclick="toggleCart()" class="inline-flex items-center gap-3 bg-green-600 hover:bg-green-500 text-white font-black uppercase text-xs tracking-wider px-8 py-4 rounded-xl transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg">
+                <i class="fa-solid fa-basket-shopping text-base"></i> <span id="text-cta-btn-basket">Открыть лист примерки</span>
+            </button>
+        </section>
+
+        <!-- БЛОК КОНТАКТОВ С КАРТОЙ БИШКЕКА -->
+        <section id="map-section" class="bg-cyberCard border border-gray-800 rounded-xl p-6 sm:p-8 grid md:grid-cols-5 gap-8 items-center scroll-mt-6">
+            <div class="md:col-span-2 space-y-4">
+                <h3 id="text-contacts-title" class="text-xl font-black tracking-wider text-white uppercase border-b border-gray-800 pb-3">
+                    [ ШОУРУМ / ТОЧКА СБОРУ ]
+                </h3>
+                <div class="space-y-3 text-sm">
+                    <p class="text-gray-400">
+                        <strong id="text-address-label" class="text-white block text-xs uppercase text-cyberPolaroid font-mono mb-0.5">Адрес самовывоза:</strong>
+                        г. Бишкек, центр города (например, пересечение Чуй / Манаса)
+                    </p>
+                    <p class="text-gray-400">
+                        <strong id="text-hours-label" class="text-white block text-xs uppercase text-cyberSport font-mono mb-0.5">Время работы:</strong>
+                        Каждый день с 10:00 до 21:00
+                    </p>
+                </div>
+            </div>
+            
+            <div class="md:col-span-3 w-full h-64 sm:h-80 rounded-lg overflow-hidden border border-gray-800 relative shadow-inner">
+                <iframe src="https://yandex.ru/map-widget/v1/?ll=74.590000%2C42.875000&z=14&l=map" class="absolute inset-0 w-full height-full border-0 grayscale opacity-80 invert transition-all duration-500 hover:grayscale-0 hover:opacity-100" allowfullscreen="true" style="height: 100%;"></iframe>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-gray-900 mt-12 py-8 px-6 text-center text-xs text-gray-600 max-w-7xl mx-auto">
+        <div>&copy; 2026 Bishkek Spectacle. Трендовый спорт & Polaroid. Разработано на базе Tailwind + JS.</div>
+    </footer>
+
+    <!-- LOGIC JAVASCRIPT -->
+    <script>
+
+        // Оставляем эти настройки ТОЛЬКО в одном месте (вверху скрипта)
+         const TELEGRAM_BOT_TOKEN = "8789644151:AAFEMG7-0vS7AOPWTubRW2zx6hdw63v_2lk";
+         const TELEGRAM_CHAT_ID = "8372253053"; // Твой цифровой ID, который сработал
+         const MY_WHATSAPP = "996705776695";
+        
+        let cart = [];
+        let currentCategory = 'all';
+
+        // Показ временных уведомлений (Toast)
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = "toast-animate bg-slate-900 border border-cyberPolaroid text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider shadow-[0_0_15px_rgba(0,255,204,0.3)] flex items-center gap-2";
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-cyberPolaroid"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            // Удаляем элемент после завершения анимации исчезновения
+            setTimeout(() => { toast.remove(); }, 2300);
+        }
+
+        // Анимация толчка кнопки корзины
+        function animateCartButton() {
+            const btn = document.getElementById('cart-float-btn');
+            btn.classList.add('scale-125', 'shadow-[0_0_25px_#ff0055]');
+            setTimeout(() => {
+                btn.classList.remove('scale-125', 'shadow-[0_0_25px_#ff0055]');
+            }, 200);
+        }
+
+        function toggleCart() {
+            document.getElementById('cart-sidebar').classList.toggle('translate-x-full');
+        }
+
+        function addToCart(name, price) {
+            const exists = cart.find(item => item.name === name);
+            if (!exists) {
+                cart.push({ name, price });
+                updateCartUI();
+                
+                // Вместо открытия корзины — триггерим крутые эффекты
+                showToast(currentLang === 'ru' ? `Добавлено: ${name}` : `Кошулду: ${name}`);
+                animateCartButton();
+            } else {
+                showToast(currentLang === 'ru' ? "Уже в списке!" : "Тизмеде бар!");
+            }
+        }
+
+        function removeFromCart(name) {
+            cart = cart.filter(item => item.name !== name);
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const cartItemsContainer = document.getElementById('cart-items');
+            const cartEmptyText = document.getElementById('cart-empty-text');
+            const cartBadge = document.getElementById('cart-badge');
+            const cartTotalPrice = document.getElementById('cart-total-price');
+            
+            cartItemsContainer.querySelectorAll('.cart-rendered-item').forEach(el => el.remove());
+
+            if (cart.length === 0) {
+                cartEmptyText.classList.remove('hidden');
+                cartBadge.classList.add('hidden');
+                cartTotalPrice.innerText = "0 KGS";
+            } else {
+                cartEmptyText.classList.add('hidden');
+                cartBadge.classList.remove('hidden');
+                cartBadge.innerText = cart.length;
+
+                let total = 0;
+                cart.forEach(item => {
+                    total += item.price;
+                    const itemHTML = `
+                        <div class="cart-rendered-item flex justify-between items-center bg-slate-900 border border-gray-800 p-3 rounded-lg">
+                            <div>
+                                <h4 class="text-xs font-black uppercase text-white">${item.name}</h4>
+                                <span class="text-xs text-cyberPolaroid font-bold">${item.price} KGS</span>
+                            </div>
+                            <button onclick="removeFromCart('${item.name}')" class="text-gray-500 hover:text-cyberSport text-sm p-1">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    `;
+                    cartItemsContainer.insertAdjacentHTML('beforeend', itemHTML);
+                });
+                cartTotalPrice.innerText = `${total} KGS`;
+            }
+        }
+
+        function sendOrderToWhatsApp() {
+    if (cart.length === 0) {
+        alert(currentLang === 'ru' ? "Лист примерки пуст!" : "Ченөө тизмеси бош!");
+        return;
+    }
+
+    const addressInput = document.getElementById('delivery-address').value.trim();
+    const finalAddress = addressInput || (currentLang === 'ru' ? "Не указан (уточню в чате)" : "Көрсөтүлгөн жок");
+
+    // Формируем текст сообщения
+    let messageText = "";
+    let total = cart.reduce((sum, item) => sum + item.price, 0);
+
+    if (currentLang === 'ru') {
+        messageText = "🔥 НОВЫЙ ЗАКАЗ НА ПРИМЕРКУ! 🔥\n\n";
+        cart.forEach((item, index) => { messageText += `${index + 1}. ${item.name} — ${item.price} KGS\n`; });
+        messageText += `\n💰 Итоговая сумма: ${total} KGS\n`;
+        messageText += `📍 Адрес доставки: ${finalAddress}\n`;
+    } else {
+        messageText = "🔥 ЧЕНӨӨГӨ ЖАНЫ ЗАКАЗ! 🔥\n\n";
+        cart.forEach((item, index) => { messageText += `${index + 1}. ${item.name} — ${item.price} KGS\n`; });
+        messageText += `\n💰 Жалпы суммасы: ${total} KGS\n`;
+        messageText += `📍 Жеткирүү дареги: ${finalAddress}\n`;
+    }
+
+    // ТЕЛЕГРАМ БОТ (Отправка без повторного объявления const)
+    try {
+        const tgUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+        
+        fetch(tgUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                chat_id: TELEGRAM_CHAT_ID,
+                text: messageText
+            })
+        })
+        .then(res => {
+            if(!res.ok) console.log("Ответ от TG не OK", res);
+        })
+        .catch(err => console.log("Ошибка fetch к TG:", err));
+    } catch (e) {
+        console.log("Критическая ошибка отправки TG:", e);
+    }
+
+    // ОТКРЫТИЕ WHATSAPP
+    let waMessage = messageText + (currentLang === 'ru' ? "\nКогда сможете доставить на примерку?" : "\nКачан ченөөгө алып келе аласыздар?");
+    const waUrl = `https://wa.me/${MY_WHATSAPP}?text=${encodeURIComponent(waMessage)}`;
+    window.open(waUrl, '_blank');
+}
+
+        // --- Переводчик интерфейса ---
+        const translations = {
+            ru: {
+                location: "Локация: Бишкек",
+                heroTitle: "ЖЕСТКИЙ СТИЛЬ.<br class='sm:hidden'> ИДЕАЛЬНАЯ ЧЕТКОСТЬ.",
+                heroDesc: "Твой уличный комплит для защиты от солнца, встречного ветра и серых будней. Только технологичный спорт и оригинальный Polaroid в Бишкеке.",
+                ctaTitle: "Примерка и быстрая доставка по Бишкеку",
+                ctaDesc: "Не уверен, какая форма подойдет под твое лицо? Без проблем. Напиши нам — мы соберем 2-3 любые модели на твой выбор и доставим курьером в любую точку города за пару часов.",
+                ctaBtnBasket: "Открыть лист примерки",
+                contactsTitle: "[ ШОУРУМ / ТОЧКА СБОРУ ]",
+                addressLabel: "Адрес самовывоза:",
+                hoursLabel: "Время работы:",
+                cartTitle: "[ Лист примерки ]",
+                cartTotal: "Итого к примерке:",
+                cartBtn: "Вызвать курьера с очками",
+                emptyCart: "Твой лист примерки пока пуст.",
+                addressFieldLabel: "Адрес доставки в Бишкеке:",
+                searchPlaceholder: "Быстрый поиск очков по названию..."
+            },
+            kg: {
+                location: "Жайгашкан жери: Бишкек",
+                heroTitle: "КАТУУ СТИЛЬ.<br class='sm:hidden'> ИДЕАЛДУУ ТАКТЫК.",
+                heroDesc: "Күндөн, каршы шамалдан жана боз күнүмдүк жашоодон коргоо үчүн сенин көчө комплитиң. Бишкекте гана технологиялык спорт жана оригиналдуу Polaroid.",
+                ctaTitle: "Бишкек боюнча бат жеткирүү жана ченеп көрүү",
+                ctaDesc: "Кайсы форма жүзүңө туура келерин билбей жатасыңбы? Көйгөй жок. Бизге жаз — биз сенин тандооң боюнча 2-3 каалаган моделди чогултуп, бир нече саатта шаардын каалаган жерине курьер менен жеткирип беребиз.",
+                ctaBtnBasket: "Ченөө тизмесин ачуу",
+                contactsTitle: "[ ШОУРУМ / ЖЫЙНАЛУУ ЖЕРИ ]",
+                addressLabel: "Алып кетүү дареги:",
+                hoursLabel: "Иштөө убактысы:",
+                cartTitle: "[ Ченөө тизмеси ]",
+                cartTotal: "Жалпы ченөөгө:",
+                cartBtn: "Көз айнек менен курьерди чакыруу",
+                emptyCart: "Тандалган көз айнектер жок.",
+                addressFieldLabel: "Бишкектеги жеткирүү дареги:",
+                searchPlaceholder: "Көз айнекти аты боюнча тез издөө..."
+            }
+        };
+
+        let currentLang = 'ru';
+        const langToggleBtn = document.getElementById('langToggle');
+        
+        langToggleBtn.addEventListener('click', () => {
+            currentLang = currentLang === 'ru' ? 'kg' : 'ru';
+            langToggleBtn.innerText = currentLang === 'ru' ? 'KG' : 'RU';
+            
+            document.getElementById('text-location').innerText = translations[currentLang].location;
+            document.getElementById('text-hero-title').innerHTML = translations[currentLang].heroTitle;
+            document.getElementById('text-hero-desc').innerText = translations[currentLang].heroDesc;
+            document.getElementById('text-cta-title').innerText = translations[currentLang].ctaTitle;
+            document.getElementById('text-cta-desc').innerHTML = translations[currentLang].ctaDesc;
+            document.getElementById('text-cta-btn-basket').innerText = translations[currentLang].ctaBtnBasket;
+            document.getElementById('text-contacts-title').innerText = translations[currentLang].contactsTitle;
+            document.getElementById('text-address-label').innerText = translations[currentLang].addressLabel;
+            document.getElementById('text-hours-label').innerText = translations[currentLang].hoursLabel;
+            document.getElementById('text-cart-title').innerText = translations[currentLang].cartTitle;
+            document.getElementById('text-cart-total').innerText = translations[currentLang].cartTotal;
+            document.getElementById('text-cart-btn').innerText = translations[currentLang].cartBtn;
+            document.getElementById('cart-empty-text').innerText = translations[currentLang].emptyCart;
+            document.getElementById('text-address-field-label').innerText = translations[currentLang].addressFieldLabel;
+            document.getElementById('search-input').placeholder = translations[currentLang].searchPlaceholder;
+            
+            document.getElementById('btn-all').innerText = currentLang === 'ru' ? '[ ВСЕ ]' : '[ БААРЫ ]';
+
+            document.querySelectorAll('.data-translate').forEach(el => {
+                el.innerText = el.getAttribute(`data-${currentLang}`);
+            });
+            document.querySelectorAll('.data-translate-btn').forEach(el => {
+                el.innerText = el.getAttribute(`data-${currentLang}`);
+            });
+        });
+    </script>
+    <script src="app.js"></script>
+</body>
+</html>
